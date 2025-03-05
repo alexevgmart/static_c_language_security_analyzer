@@ -1,4 +1,4 @@
-#!/mnt/c/Users/Alexander/Desktop/code_analyzer/env/bin/python3
+#!/mnt/c/Users/Alexander/Desktop/static_c_language_security_analyzer/env/bin/python3
 import clang.cindex
 import re
 
@@ -65,6 +65,7 @@ read_functions = [
     'fread',
     'scanf',
     'fscanf',
+    '__isoc99_scanf',
     'gets',
     'fgets',
     'getline'
@@ -221,7 +222,7 @@ def analyze_scanf(node):
                     if variable.kind == clang.cindex.CursorKind.UNEXPOSED_EXPR:
                         variable = search_clang_parser_type(variable)
                     break
-        print(f'Unsafe "%s" in scanf format in line {node.location.line}, target variable: {variable.spelling} (buffer overflow)')
+        print(f'[+] Unsafe "%s" in scanf format in line {node.location.line}, target variable: {variable.spelling} (buffer overflow)')
         found_something = True
     else:
         percent_number_s_pattern = re.compile(r'%(\d+)s')
@@ -243,7 +244,7 @@ def analyze_scanf(node):
                 return
 
             if variable_size != None and variable_size < int(matches[0]):
-                print(f'Unsafe "%{matches[0]}s" in scanf format in line {node.location.line}, '
+                print(f'[+] Unsafe "%{matches[0]}s" in scanf format in line {node.location.line}, '
                     + f'target variable: {variable.spelling} (buffer overflow ({int(matches[0]) - variable_size} bytes))')
                 found_something = True
             
@@ -257,15 +258,15 @@ def analyze_printf(node):
             try:
                 variable_controlled = is_variable_controled(variable)
                 if variable_controlled:
-                    print(f'Unsafe printf({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (leak of data in the stack)'
+                    print(f'[+] Unsafe printf({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (leak of data in the stack)'
                         + f'\tP.S. if you are master, you can also write into stack (check %n format)')
                     found_something = True
                 else:
-                    print(f'Unsafe printf({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (leak of data in the stack)'
+                    print(f'[*] Unsafe printf({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (leak of data in the stack)'
                     + f'\tP.S. we are not sure, that `{variable.spelling}` controled by the user (if you are master, you can also write into stack (check %n format))')
                     found_something = True
             except:
-                print(f'Unsafe printf({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (leak of data in the stack)'
+                print(f'[*] Unsafe printf({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (leak of data in the stack)'
                     + f'\tP.S. we are not sure, that `{variable.spelling}` controled by the user (if you are master, you can also write into stack (check %n format))')
                 found_something = True
             
@@ -292,7 +293,7 @@ def analyze_gets(node):
         if variable.kind == clang.cindex.CursorKind.UNEXPOSED_EXPR:
             variable = search_clang_parser_type(variable)
         if variable.kind == clang.cindex.CursorKind.DECL_REF_EXPR:
-            print(f'Unsafe gets({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (buffer overflow)')
+            print(f'[+] Unsafe gets({variable.spelling}) in line {node.location.line}, target variable: {variable.spelling} (buffer overflow)')
             global found_something
             found_something = True
 
@@ -308,7 +309,7 @@ def analyze_fgets(node):
             return
         
         if variable_size < size:
-            print(f'Unsafe `fgets` in line {node.location.line}, targer variable: {variable.spelling} (buffer overflow ({size - variable_size} bytes))')
+            print(f'[+] Unsafe `fgets` in line {node.location.line}, targer variable: {variable.spelling} (buffer overflow ({size - variable_size} bytes))')
             global found_something
             found_something = True
 
@@ -324,7 +325,7 @@ def analyze_read(node):
             return
         
         if variable_size < size:
-            print(f'Unsafe `read` in line {node.location.line}, targer variable: {variable.spelling} (buffer overflow ({size - variable_size} bytes))')
+            print(f'[+] Unsafe `read` in line {node.location.line}, targer variable: {variable.spelling} (buffer overflow ({size - variable_size} bytes))')
             global found_something
             found_something = True
 
@@ -341,7 +342,7 @@ def analyze_fread(node):
             return
         
         if variable_size < (size * nmemb):
-            print(f'Unsafe `fread` in line {node.location.line}, targer variable: {variable.spelling} (buffer overflow ({(size * nmemb) - variable_size} bytes))')
+            print(f'[+] Unsafe `fread` in line {node.location.line}, targer variable: {variable.spelling} (buffer overflow ({(size * nmemb) - variable_size} bytes))')
             global found_something
             found_something = True
         
@@ -361,7 +362,7 @@ def analyze_strcpy(node):
             return
         
         if dst_size < src_size:
-            print(f'Unsafe `strcpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
+            print(f'[+] Unsafe `strcpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
             global found_something
             found_something = True
 
@@ -386,9 +387,9 @@ def analyze_strncpy(node):
 
         if dsize > dst_size and dst_size < src_size:
             if src_size <= dsize:
-                print(f'Unsafe `strncpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
+                print(f'[+] Unsafe `strncpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
             else:
-                print(f'Unsafe `strncpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({dsize - dst_size} bytes))')
+                print(f'[+] Unsafe `strncpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({dsize - dst_size} bytes))')
             global found_something
             found_something = True
 
@@ -408,7 +409,7 @@ def analyze_strcat(node):
             return
         
         if dst_size < src_size:
-            print(f'Unsafe `strcat` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes ))'
+            print(f'[+] Unsafe `strcat` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes ))'
                 + f'\tP.S. There could be more bytes if `dst` is not empty')
             global found_something
             found_something = True
@@ -434,9 +435,9 @@ def analyze_strncat(node):
 
         if dsize > dst_size and dst_size < src_size:
             if src_size <= dsize:
-                print(f'Unsafe `strncat` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
+                print(f'[+] Unsafe `strncat` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
             else:
-                print(f'Unsafe `strncat` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({dsize - dst_size} bytes))')
+                print(f'[+] Unsafe `strncat` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({dsize - dst_size} bytes))')
             global found_something
             found_something = True
 
@@ -461,9 +462,9 @@ def analyze_memcpy(node):
 
         if dsize > dst_size and dst_size < src_size:
             if src_size <= dsize:
-                print(f'Unsafe `memcpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
+                print(f'[+] Unsafe `memcpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({src_size - dst_size} bytes))')
             else:
-                print(f'Unsafe `memcpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({dsize - dst_size} bytes))')
+                print(f'[+] Unsafe `memcpy` in line {node.location.line}, targer variable: {src.spelling} (buffer overflow ({dsize - dst_size} bytes))')
             global found_something
             found_something = True
 
@@ -475,15 +476,15 @@ def analyze_array(node, array_node):
         if tmp.kind == clang.cindex.CursorKind.DECL_REF_EXPR:
             variable_controlled = is_variable_controled(tmp)
             if variable_controlled and node.spelling in read_functions:
-                print(f'Unsafe index of `{list(array_node.get_children())[0].spelling}` in line {array_node.location.line}, target variable: {list(array_node.get_children())[1].spelling} (write-what-where)')
+                print(f'[+] Unsafe index of `{list(array_node.get_children())[0].spelling}` in line {array_node.location.line}, target variable: {list(array_node.get_children())[1].spelling} (write-what-where)')
                 found_something = True
                 break
             elif variable_controlled and node.spelling in write_functions:
-                print(f'Unsafe index of `{list(array_node.get_children())[0].spelling}` in line {array_node.location.line}, target variable: {list(array_node.get_children())[1].spelling} (read from anywhere)')
+                print(f'[+] Unsafe index of `{list(array_node.get_children())[0].spelling}` in line {array_node.location.line}, target variable: {list(array_node.get_children())[1].spelling} (read from anywhere)')
                 found_something = True
                 break
             elif variable_controlled and node.spelling == 'free':
-                print(f'Unsafe free({list(array_node.get_children())[0].spelling}[{list(array_node.get_children())[1].spelling}]) in line {array_node.location.line}, target variable: {list(array_node.get_children())[1].spelling} (double free)')
+                print(f'[+] Unsafe free({list(array_node.get_children())[0].spelling}[{list(array_node.get_children())[1].spelling}]) in line {array_node.location.line}, target variable: {list(array_node.get_children())[1].spelling} (double free)')
                 found_something = True
                 break
 
@@ -525,7 +526,7 @@ def analyze_free(node):
                     if child_name == variable_name:
                         if child.kind == clang.cindex.CursorKind.VAR_DECL:
                             return
-                        print(f'Use after free in line {node.location.line}, target  variable: {variable_name}')
+                        print(f'[+] Use after free in line {node.location.line}, target  variable: {variable_name}')
                         found = True
                         global found_something
                         found_something = True
@@ -553,6 +554,8 @@ def analyze_code(file_path):
             if node.kind == clang.cindex.CursorKind.CALL_EXPR:
                 match node.spelling:
                     case 'scanf':
+                        analyze_scanf(node)
+                    case '__isoc99_scanf':
                         analyze_scanf(node)
                     case 'printf':
                         analyze_printf(node)
@@ -585,6 +588,6 @@ def analyze_code(file_path):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
-        print("Использование: ./anal.py <файл.c>")
+        print("Использование: ./analyzer.py <файл.c>")
     else:
         analyze_code(sys.argv[1])
