@@ -1,4 +1,4 @@
-#!/mnt/c/Users/Alexander/Desktop/static_c_language_security_analyzer/env/bin/python3
+#!/path/to/your/env/python3
 import clang.cindex
 import re
 
